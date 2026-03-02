@@ -7,7 +7,7 @@ CREATE TABLE processed_agent_data (
     z FLOAT,
     latitude FLOAT,
     longitude FLOAT,
-    time TIMESTAMP 
+    timestamp TIMESTAMP 
 );
 
 -- Таблиця для збереження даних про паркування 
