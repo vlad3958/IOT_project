@@ -23,7 +23,7 @@ processed_agent_data = Table(
     Column("z", Float),
     Column("latitude", Float),
     Column("longitude", Float),
-    Column("time", DateTime), 
+    Column("timestamp", DateTime), 
 )
 
 parking_data_table = Table(
@@ -48,7 +48,7 @@ class GpsData(BaseModel):
 class AgentData(BaseModel):
     accelerometer: AccelerometerData
     gps: GpsData
-    time: datetime 
+    timestamp: datetime 
 
     @field_validator('time', mode='before')
     @classmethod
@@ -72,7 +72,7 @@ class ProcessedAgentDataInDB(BaseModel):
     z: float
     latitude: float
     longitude: float
-    time: datetime
+    timestamp: datetime
 
 
 # 4. FastAPI додаток та WebSocket логіка
@@ -107,7 +107,7 @@ async def create_processed_agent_data(data: List[ProcessedAgentData]):
                 z=item.agent_data.accelerometer.z,
                 latitude=item.agent_data.gps.latitude,
                 longitude=item.agent_data.gps.longitude,
-                time=item.agent_data.time
+                timestamp=item.agent_data.timestamp
             ).returning(processed_agent_data)
             result = connection.execute(stmt)
             inserted_data.append(dict(result.first()._mapping))
@@ -143,7 +143,7 @@ def update_processed_agent_data(data_id: int, data: ProcessedAgentData):
             z=data.agent_data.accelerometer.z,
             latitude=data.agent_data.gps.latitude,
             longitude=data.agent_data.gps.longitude,
-            time=data.agent_data.time
+            timestamp=data.agent_data.timestamp
         )
         result = connection.execute(stmt)
         if result.rowcount == 0:
