@@ -7,3 +7,4 @@ __pycache__/
 src/docker/mosquitto/data/
 src/docker/mosquitto/log/
 src/docker/mosquitto/config/password.txt
+.Ds_Store
