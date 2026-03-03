@@ -50,7 +50,7 @@ class AgentData(BaseModel):
     gps: GpsData
     timestamp: datetime 
 
-    @field_validator('time', mode='before')
+    @field_validator('timestamp', mode='before')
     @classmethod
     def check_time(cls, value):
         if isinstance(value, datetime): 

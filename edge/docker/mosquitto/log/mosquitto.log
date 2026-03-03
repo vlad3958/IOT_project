@@ -1,0 +1,37 @@
+1772561246: mosquitto version 2.1.2 starting
+1772561246: Config loaded from /mosquitto/config/mosquitto.conf.
+1772561246: Bridge support available.
+1772561246: Persistence support available.
+1772561246: TLS support available.
+1772561246: TLS-PSK support available.
+1772561246: Websockets support available.
+1772561246: Opening ipv4 listen socket on port 1883.
+1772561246: Opening ipv6 listen socket on port 1883.
+1772561246: mosquitto version 2.1.2 running
+1772561248: New connection from 172.22.0.3:33209 on port 1883.
+1772561248: New client connected from 172.22.0.3:33209 as auto-EB221C11-0779-5531-3061-3DFB92C4AAF3 (p4, c1, k60).
+1772561248: New connection from 172.22.0.4:33045 on port 1883.
+1772561248: New client connected from 172.22.0.4:33045 as auto-B39E4475-3435-9299-A8A0-F21C9CC6472F (p4, c1, k60).
+1772561248: New connection from 172.22.0.4:57633 on port 1883.
+1772561248: New client connected from 172.22.0.4:57633 as auto-8CB4D474-A15E-B992-60A3-9D66C1846432 (p4, c1, k60).
+1772561338: mosquitto version 2.1.2 starting
+1772561338: Config loaded from /mosquitto/config/mosquitto.conf.
+1772561338: Bridge support available.
+1772561338: Persistence support available.
+1772561338: TLS support available.
+1772561338: TLS-PSK support available.
+1772561338: Websockets support available.
+1772561338: Opening ipv4 listen socket on port 1883.
+1772561338: Opening ipv6 listen socket on port 1883.
+1772561338: mosquitto version 2.1.2 running
+1772561339: New connection from 172.22.0.3:42193 on port 1883.
+1772561339: New client connected from 172.22.0.3:42193 as auto-A11FE61B-FC2A-1BB3-C7C3-E34214614D32 (p4, c1, k60).
+1772561340: New connection from 172.22.0.4:34063 on port 1883.
+1772561340: New client connected from 172.22.0.4:34063 as auto-17087922-64CA-A6A0-5EC2-AE09F0DE354E (p4, c1, k60).
+1772561340: New connection from 172.22.0.5:48941 on port 1883.
+1772561340: New client connected from 172.22.0.5:48941 as auto-DB24EBA2-EA11-B932-057B-AD25641830D7 (p4, c1, k60).
+1772561340: New connection from 172.22.0.5:58437 on port 1883.
+1772561340: New client connected from 172.22.0.5:58437 as auto-1174EF2E-CA0E-3DF3-E541-A03BF5562479 (p4, c1, k60).
+1772561577: New connection from 172.22.0.1:35098 on port 1883.
+1772561577: New client connected from 172.22.0.1:35098 as mqtt-explorer-1d51d89a (p4, c1, k60).
+1772561608: Client mqtt-explorer-1d51d89a [172.22.0.1:35098] disconnected.
