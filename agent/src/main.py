@@ -3,7 +3,12 @@ import json
 import time
 from schema.aggregated_data_schema import AggregatedDataSchema
 from schema.parking_schema import ParkingSchema
+from schema.violation_event_schema import ViolationEventSchema
 from file_datasource import FileDatasource
+from zone_detector import (
+    load_zones,
+    detect_red_light_violation,
+)
 import config
 def connect_mqtt(broker, port):
     """Create MQTT client"""
@@ -22,12 +27,33 @@ def connect_mqtt(broker, port):
 
 def publish(client, datasource, delay):
     datasource.startReading()
+    zones = load_zones(config.ZONES_FILE)
+    previous_gps = None
+    violation_schema = ViolationEventSchema()
+
     while True:
         time.sleep(delay)
         data = datasource.read()
         # Відправляємо aggregated у один топік, parking у інший
         agg_msg = AggregatedDataSchema().dumps(data['aggregated'])
         parking_msg = ParkingSchema().dumps(data['parking'])
+        current_gps = data['aggregated'].gps
+
+        violations = []
+        violations.extend(
+            detect_red_light_violation(current_gps, previous_gps, zones)
+        )
+
+        for violation in violations:
+            violation_msg = violation_schema.dumps(violation)
+            violation_result = client.publish(config.MQTT_VIOLATION_TOPIC, violation_msg)
+            if violation_result[0] != 0:
+                print(f"Failed to send violation message to topic {config.MQTT_VIOLATION_TOPIC}")
+            else:
+                print(f"Sent violation ({violation.violation_type}) to {config.MQTT_VIOLATION_TOPIC}")
+
+        previous_gps = current_gps
+        
         print(f"DEBUG parking_msg: {parking_msg}")
         print(f"DEBUG parking_obj: {data['parking']}")
         if not parking_msg or parking_msg == 'null':

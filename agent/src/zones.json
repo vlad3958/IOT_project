@@ -1,0 +1,37 @@
+[
+  {
+    "zone_id": "traffic_light_1",
+    "type": "traffic_light",
+    "center": [50.4504, 30.5245],
+    "radius_m": 30,
+    "state": "red"
+  },
+  {
+    "zone_id": "traffic_light_2",
+    "type": "traffic_light",
+    "center": [50.45085, 30.52368],
+    "radius_m": 25,
+    "state": "green"
+  },
+  {
+    "zone_id": "traffic_light_3",
+    "type": "traffic_light",
+    "center": [50.45130, 30.52280],
+    "radius_m": 28,
+    "state": "red"
+  },
+  {
+    "zone_id": "traffic_light_4",
+    "type": "traffic_light",
+    "center": [50.45193, 30.52235],
+    "radius_m": 22,
+    "state": "yellow"
+  },
+  {
+    "zone_id": "traffic_light_5",
+    "type": "traffic_light",
+    "center": [50.45263, 30.52211],
+    "radius_m": 30,
+    "state": "red"
+  }
+]
