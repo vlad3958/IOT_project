@@ -85,6 +85,7 @@ services:
       MQTT_BROKER_HOST: "mqtt"
       MQTT_BROKER_PORT: 1883
       MQTT_TOPIC: "processed_data_topic"
+      VIOLATION_MQTT_TOPIC: "violation_events"
       BATCH_SIZE: 1
     ports:
       - "9000:8000"

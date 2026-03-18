@@ -1,5 +1,8 @@
 from abc import ABC, abstractmethod
+from typing import List
+
 from app.entities.processed_agent_data import ProcessedAgentData
+from app.entities.violation_event import ViolationEvent
 
 
 class StoreGateway(ABC):
@@ -9,14 +12,21 @@ class StoreGateway(ABC):
     """
 
     @abstractmethod
-    def save_data(self, processed_data: ProcessedAgentData) -> bool:
+    def save_processed_data_batch(
+        self,
+        processed_data_batch: List[ProcessedAgentData],
+    ) -> bool:
         """
-        Method to save the processed agent data in the database.
+        Save a batch of processed agent data in the database.
+        """
+        pass
 
-        Parameters:
-            processed_data (ProcessedAgentData): The processed agent data to be saved.
-
-        Returns:
-            bool: True if the data is successfully saved, False otherwise.
+    @abstractmethod
+    def save_violation_events_batch(
+        self,
+        violation_events_batch: List[ViolationEvent],
+    ) -> bool:
+        """
+        Save a batch of violation events in the database.
         """
         pass

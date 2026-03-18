@@ -1,0 +1,9 @@
+[
+  {
+    "road_id": "road_wrong_way_demo",
+    "center": [50.4508, 30.5239],
+    "radius_m": 180,
+    "allowed_direction": 335,
+    "wrong_way_threshold_deg": 135
+  }
+]

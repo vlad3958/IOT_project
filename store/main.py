@@ -1,8 +1,19 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from pydantic import BaseModel, field_validator
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float, DateTime
 from datetime import datetime
-from typing import List, Set
+from typing import Any, List, Set
+
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    create_engine,
+)
 import json
 import config
 import uvicorn
@@ -33,6 +44,22 @@ parking_data_table = Table(
     Column("empty_count", Integer),
     Column("latitude", Float),
     Column("longitude", Float),
+)
+
+violation_events = Table(
+    "violation_events",
+    metadata,
+    Column("id", Integer, primary_key=True, index=True),
+    Column("violation_type", String, nullable=False),
+    Column("severity", String),
+    Column("vehicle_id", String),
+    Column("latitude", Float),
+    Column("longitude", Float),
+    Column("timestamp", DateTime),
+    Column("message", String),
+    Column("fine_type", String),
+    Column("fine_amount", Integer),
+    Column("details", JSON),
 )
 
 # 3. Моделі даних Pydantic 
@@ -73,6 +100,33 @@ class ProcessedAgentDataInDB(BaseModel):
     latitude: float
     longitude: float
     timestamp: datetime
+
+
+class ViolationEvent(BaseModel):
+    violation_type: str
+    severity: str = "warning"
+    vehicle_id: str
+    latitude: float
+    longitude: float
+    timestamp: datetime
+    message: str
+    fine_type: str | None = None
+    fine_amount: int | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def check_violation_time(cls, value):
+        if isinstance(value, datetime):
+            return value
+        try:
+            return datetime.fromisoformat(value)
+        except (TypeError, ValueError):
+            raise ValueError("Invalid time format. Expected ISO 8601.")
+
+
+class ViolationEventInDB(ViolationEvent):
+    id: int
 
 
 # 4. FastAPI додаток та WebSocket логіка
@@ -116,11 +170,16 @@ async def create_processed_agent_data(data: List[ProcessedAgentData]):
     return {"status": "ok", "count": len(inserted_data)}
 
 @app.get("/processed_agent_data/", response_model=List[ProcessedAgentDataInDB])
-def list_processed_agent_data():
+def list_processed_agent_data(limit: int | None = Query(default=None, ge=1, le=5000)):
     with engine.connect() as connection:
         query = processed_agent_data.select()
+        if limit is not None:
+            query = query.order_by(processed_agent_data.c.id.desc()).limit(limit)
         result = connection.execute(query)
-        return [dict(row._mapping) for row in result]
+        rows = [dict(row._mapping) for row in result]
+        if limit is not None:
+            rows.reverse()
+        return rows
 
 @app.get("/processed_agent_data/{data_id}", response_model=ProcessedAgentDataInDB)
 def read_processed_agent_data(data_id: int):
@@ -159,6 +218,52 @@ def delete_processed_agent_data(data_id: int):
         connection.execute(stmt)
         connection.commit()
         return data_to_delete
+
+
+@app.post("/violation_events/", status_code=201)
+async def create_violation_events(data: List[ViolationEvent]):
+    with engine.connect() as connection:
+        inserted_data = []
+        for item in data:
+            stmt = violation_events.insert().values(
+                violation_type=item.violation_type,
+                severity=item.severity,
+                vehicle_id=item.vehicle_id,
+                latitude=item.latitude,
+                longitude=item.longitude,
+                timestamp=item.timestamp,
+                message=item.message,
+                fine_type=item.fine_type,
+                fine_amount=item.fine_amount,
+                details=item.details,
+            ).returning(violation_events)
+            result = connection.execute(stmt)
+            inserted_data.append(dict(result.first()._mapping))
+        connection.commit()
+    return {"status": "ok", "count": len(inserted_data)}
+
+
+@app.get("/violation_events/", response_model=List[ViolationEventInDB])
+def list_violation_events(limit: int | None = Query(default=None, ge=1, le=1000)):
+    with engine.connect() as connection:
+        query = violation_events.select()
+        if limit is not None:
+            query = query.order_by(violation_events.c.id.desc()).limit(limit)
+        result = connection.execute(query)
+        rows = [dict(row._mapping) for row in result]
+        if limit is not None:
+            rows.reverse()
+        return rows
+
+
+@app.get("/violation_events/{event_id}", response_model=ViolationEventInDB)
+def read_violation_event(event_id: int):
+    with engine.connect() as connection:
+        query = violation_events.select().where(violation_events.c.id == event_id)
+        result = connection.execute(query).first()
+        if not result:
+            raise HTTPException(status_code=404, detail="Violation event not found")
+        return dict(result._mapping)
 
 # 6. Точка входу для запуску
 if __name__ == "__main__":

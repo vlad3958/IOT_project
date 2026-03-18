@@ -1,10 +1,14 @@
 import logging
+import time
 from app.adapters.agent_mqtt_adapter import AgentMQTTAdapter
-from app.adapters.hub_http_adapter import HubHttpAdapter
 from app.adapters.hub_mqtt_adapter import HubMqttAdapter
+from app.adapters.violation_mqtt_adapter import ViolationMqttAdapter
+from app.usecases.violation_detection import ViolationDetector
 from config import (
     MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_TOPIC,
-    HUB_URL, HUB_MQTT_BROKER_HOST, HUB_MQTT_BROKER_PORT, HUB_MQTT_TOPIC,
+    HUB_MQTT_BROKER_HOST, HUB_MQTT_BROKER_PORT, HUB_MQTT_TOPIC,
+    VIOLATION_MQTT_TOPIC, ROADS_CONFIG_PATH, VEHICLE_ID, MIN_DIRECTION_MOVEMENT_M,
+    WRONG_WAY_MAX_RANDOM_INTERVAL_S,
 )
 
 
@@ -24,6 +28,17 @@ if __name__ == "__main__":
         port=HUB_MQTT_BROKER_PORT,
         topic=HUB_MQTT_TOPIC,
     )
+    violation_adapter = ViolationMqttAdapter(
+        broker=HUB_MQTT_BROKER_HOST,
+        port=HUB_MQTT_BROKER_PORT,
+        topic=VIOLATION_MQTT_TOPIC,
+    )
+    violation_detector = ViolationDetector.from_json(
+        config_path=ROADS_CONFIG_PATH,
+        vehicle_id=VEHICLE_ID,
+        min_movement_distance_m=MIN_DIRECTION_MOVEMENT_M,
+        wrong_way_max_random_interval_s=WRONG_WAY_MAX_RANDOM_INTERVAL_S,
+    )
 
     # Agent adapter (subscribes to agent data from MQTT)
     agent_adapter = AgentMQTTAdapter(
@@ -31,6 +46,8 @@ if __name__ == "__main__":
         broker_port=MQTT_BROKER_PORT,
         topic=MQTT_TOPIC,
         hub_gateway=hub_adapter,
+        violation_gateway=violation_adapter,
+        violation_detector=violation_detector,
     )
 
     try:
@@ -38,7 +55,7 @@ if __name__ == "__main__":
         agent_adapter.start()
         logging.info("Edge Data Logic started. Waiting for agent data...")
         while True:
-            pass
+            time.sleep(1)
     except KeyboardInterrupt:
         agent_adapter.stop()
         logging.info("System stopped.")

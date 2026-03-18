@@ -7,16 +7,29 @@ import paho.mqtt.client as mqtt
 from app.entities.agent_data import AgentData, AccelerometerData, GpsData
 from app.interfaces.agent_gateway import AgentGateway
 from app.interfaces.hub_gateway import HubGateway
+from app.interfaces.violation_gateway import ViolationGateway
 from app.usecases.data_processing import process_agent_data
+from app.usecases.violation_detection import ViolationDetector
 
 
 class AgentMQTTAdapter(AgentGateway):
-    def __init__(self, broker_host, broker_port, topic, hub_gateway: HubGateway):
+    def __init__(
+        self,
+        broker_host,
+        broker_port,
+        topic,
+        hub_gateway: HubGateway,
+        violation_gateway: ViolationGateway | None = None,
+        violation_detector: ViolationDetector | None = None,
+    ):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self.topic = topic
         self.hub_gateway = hub_gateway
+        self.violation_gateway = violation_gateway
+        self.violation_detector = violation_detector
         self.client = mqtt.Client()
+        self.previous_agent_data: AgentData | None = None
 
     def on_message(self, client, userdata, msg):
         try:
@@ -47,6 +60,16 @@ class AgentMQTTAdapter(AgentGateway):
 
             # Send processed data to hub
             self.hub_gateway.save_data(processed_data)
+
+            if self.violation_detector and self.violation_gateway:
+                violations = self.violation_detector.detect(
+                    current_agent_data=agent_data,
+                    previous_agent_data=self.previous_agent_data,
+                )
+                for violation in violations:
+                    self.violation_gateway.save_violation(violation)
+
+            self.previous_agent_data = agent_data
 
         except Exception as e:
             logging.error(f"Error processing agent message: {e}")
