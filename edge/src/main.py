@@ -8,6 +8,7 @@ from config import (
     MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_TOPIC,
     HUB_MQTT_BROKER_HOST, HUB_MQTT_BROKER_PORT, HUB_MQTT_TOPIC,
     VIOLATION_MQTT_TOPIC, ROADS_CONFIG_PATH, VEHICLE_ID, MIN_DIRECTION_MOVEMENT_M,
+    TRAFFIC_LIGHTS_CONFIG_PATH,
     WRONG_WAY_MAX_RANDOM_INTERVAL_S,
 )
 
@@ -34,7 +35,8 @@ if __name__ == "__main__":
         topic=VIOLATION_MQTT_TOPIC,
     )
     violation_detector = ViolationDetector.from_json(
-        config_path=ROADS_CONFIG_PATH,
+        roads_config_path=ROADS_CONFIG_PATH,
+        traffic_lights_config_path=TRAFFIC_LIGHTS_CONFIG_PATH,
         vehicle_id=VEHICLE_ID,
         min_movement_distance_m=MIN_DIRECTION_MOVEMENT_M,
         wrong_way_max_random_interval_s=WRONG_WAY_MAX_RANDOM_INTERVAL_S,

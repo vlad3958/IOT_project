@@ -7,6 +7,7 @@ from pathlib import Path
 
 from app.entities.agent_data import AgentData
 from app.entities.road_rule import RoadRule
+from app.entities.traffic_light_zone import TrafficLightZone
 from app.entities.violation_event import ViolationEvent
 
 
@@ -14,43 +15,71 @@ class ViolationDetector:
     def __init__(
         self,
         road_rules: list[RoadRule],
+        traffic_light_zones: list[TrafficLightZone],
         vehicle_id: str,
         min_movement_distance_m: float = 5.0,
         wrong_way_max_random_interval_s: float = 30.0,
     ):
         self.road_rules = road_rules
+        self.traffic_light_zones = traffic_light_zones
         self.vehicle_id = vehicle_id
         self.min_movement_distance_m = min_movement_distance_m
         self.wrong_way_max_random_interval_s = wrong_way_max_random_interval_s
         self._active_wrong_way_roads: set[str] = set()
+        self._active_red_light_zones: set[str] = set()
         self._next_wrong_way_event_at: dict[str, datetime] = {}
 
     @classmethod
     def from_json(
         cls,
-        config_path: str,
+        roads_config_path: str,
+        traffic_lights_config_path: str,
         vehicle_id: str,
         min_movement_distance_m: float = 5.0,
         wrong_way_max_random_interval_s: float = 30.0,
     ) -> "ViolationDetector":
-        path = Path(config_path)
-        if not path.exists():
-            logging.warning("Road rules config not found: %s", config_path)
-            return cls([], vehicle_id, min_movement_distance_m, wrong_way_max_random_interval_s)
+        road_rules = cls._load_road_rules(roads_config_path)
+        traffic_light_zones = cls._load_traffic_light_zones(traffic_lights_config_path)
 
-        with path.open("r", encoding="utf-8") as file:
-            raw_rules = json.load(file)
-
-        road_rules = [RoadRule.model_validate(
-            raw_rule) for raw_rule in raw_rules]
-        logging.info("Loaded %s road rule(s) from %s",
-                     len(road_rules), config_path)
         return cls(
             road_rules,
+            traffic_light_zones,
             vehicle_id,
             min_movement_distance_m,
             wrong_way_max_random_interval_s,
         )
+
+    @staticmethod
+    def _load_road_rules(config_path: str) -> list[RoadRule]:
+        path = Path(config_path)
+        if not path.exists():
+            logging.warning("Road rules config not found: %s", config_path)
+            return []
+
+        with path.open("r", encoding="utf-8") as file:
+            raw_rules = json.load(file)
+
+        road_rules = [RoadRule.model_validate(raw_rule) for raw_rule in raw_rules]
+        logging.info("Loaded %s road rule(s) from %s", len(road_rules), config_path)
+        return road_rules
+
+    @staticmethod
+    def _load_traffic_light_zones(config_path: str) -> list[TrafficLightZone]:
+        path = Path(config_path)
+        if not path.exists():
+            logging.warning("Traffic lights config not found: %s", config_path)
+            return []
+
+        with path.open("r", encoding="utf-8") as file:
+            raw_zones = json.load(file)
+
+        zones = [
+            TrafficLightZone.model_validate(raw_zone)
+            for raw_zone in raw_zones
+            if str(raw_zone.get("type", "")).lower() == "traffic_light"
+        ]
+        logging.info("Loaded %s traffic light zone(s) from %s", len(zones), config_path)
+        return zones
 
     def detect(
         self,
@@ -64,6 +93,65 @@ class ViolationDetector:
                 previous_agent_data=previous_agent_data,
             )
         )
+        violations.extend(
+            self.detect_red_light_violation(
+                current_agent_data=current_agent_data,
+                previous_agent_data=previous_agent_data,
+            )
+        )
+        return violations
+
+    def detect_red_light_violation(
+        self,
+        current_agent_data: AgentData,
+        previous_agent_data: AgentData | None,
+    ) -> list[ViolationEvent]:
+        if previous_agent_data is None or not self.traffic_light_zones:
+            return []
+
+        current_lon = current_agent_data.gps.longitude
+        current_lat = current_agent_data.gps.latitude
+        previous_lon = previous_agent_data.gps.longitude
+        previous_lat = previous_agent_data.gps.latitude
+
+        violations: list[ViolationEvent] = []
+        active_zones_now: set[str] = set()
+
+        for zone in self.traffic_light_zones:
+            zone_lon, zone_lat = zone.center
+            was_inside = self._distance_m(previous_lon, previous_lat, zone_lon, zone_lat) <= zone.radius_m
+            current_distance_m = self._distance_m(current_lon, current_lat, zone_lon, zone_lat)
+            is_inside = current_distance_m <= zone.radius_m
+
+            if is_inside:
+                active_zones_now.add(zone.zone_id)
+
+            if str(zone.state).lower() != "red":
+                continue
+
+            if not was_inside and is_inside and zone.zone_id not in self._active_red_light_zones:
+                violations.append(
+                    ViolationEvent(
+                        violation_type="red_light",
+                        severity="major",
+                        vehicle_id=self.vehicle_id,
+                        latitude=current_lat,
+                        longitude=current_lon,
+                        timestamp=current_agent_data.timestamp,
+                        message=(
+                            "Зафіксовано проїзд на червоний сигнал світлофора. "
+                            "Будь ласка, дотримуйтесь правил дорожнього руху"
+                        ),
+                        details={
+                            "zone_id": zone.zone_id,
+                            "signal_state": zone.state,
+                            "distance_to_zone_m": round(current_distance_m, 2),
+                            "zone_radius_m": zone.radius_m,
+                        },
+                    )
+                )
+
+        self._active_red_light_zones = active_zones_now
         return violations
 
     def detect_wrong_way_driving(

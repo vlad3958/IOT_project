@@ -523,7 +523,14 @@ class MapViewApp(App):
         if lon is None or lat is None:
             return
 
-        marker = MapMarker(lon=lon, lat=lat)
+        marker_source = None
+        if event.get("violation_type") == "red_light":
+            marker_source = os.path.join(BASE_DIR, "images", "red_light.png")
+
+        if marker_source and os.path.exists(marker_source):
+            marker = MapMarker(lon=lon, lat=lat, source=marker_source)
+        else:
+            marker = MapMarker(lon=lon, lat=lat)
         self.mapview.add_marker(marker)
         self.violation_markers.append(marker)
 
@@ -560,6 +567,13 @@ class MapViewApp(App):
                 f"[{event_time}] Зафіксовано рух по зустрічній смузі "
                 f"на ділянці {road_id}. Фактичний напрямок: {actual_direction}°, "
                 f"дозволений: {allowed_direction}°. Будь ласка, дотримуйтесь дозволеного напрямку руху."
+            )
+
+        if violation_type == "red_light":
+            zone_id = details.get("zone_id", "unknown_zone")
+            return (
+                f"[{event_time}] Зафіксовано проїзд на червоний сигнал світлофора "
+                f"в зоні {zone_id}. Будь ласка, дотримуйтесь правил дорожнього руху."
             )
 
         return f"[{event_time}] {event.get('message', 'Отримано нове попередження про порушення.')}"
